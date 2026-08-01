@@ -64,22 +64,39 @@
     .switch-cam-btn:active{ background:#f0f4ff; }
 
     .start-overlay{
-      position:fixed; inset:0; background:#111827; color:#fff; z-index:50;
-      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+      position:fixed; inset:0; background:linear-gradient(160deg,#111827 0%,#1c2536 100%); color:#fff; z-index:50;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;
       text-align:center; padding:24px;
     }
-    .start-overlay button{
-      padding:16px 32px; font-size:18px; font-weight:700; border:none; border-radius:12px;
-      background:var(--blue); color:#fff;
+    .role-title{ font-size:20px; font-weight:700; letter-spacing:.3px; color:#e7e9f2; }
+    .role-options{ display:flex; gap:16px; width:100%; max-width:360px; }
+    .role-btn{
+      flex:1; border:none; border-radius:18px; padding:28px 12px; display:flex; flex-direction:column;
+      align-items:center; gap:10px; font-size:18px; font-weight:700; color:#fff; cursor:pointer;
+      box-shadow:0 8px 20px rgba(0,0,0,.25); transition:transform .15s ease, box-shadow .15s ease;
     }
-    .start-overlay p{ color:#c9ccd6; font-size:14px; max-width:280px; margin:0; }
+    .role-btn:active{ transform:scale(.96); box-shadow:0 4px 10px rgba(0,0,0,.3); }
+    .role-btn .role-icon{ font-size:34px; }
+    .role-di{ background:linear-gradient(135deg,#34a853,#1e8e3e); }
+    .role-hoan{ background:linear-gradient(135deg,#f2994a,#e8710a); }
+    .start-overlay p{ color:#c9ccd6; font-size:13px; max-width:280px; margin:4px 0 0; }
   </style>
 </head>
 <body>
 
   <div class="start-overlay" id="startOverlay">
-    <button id="startBtn">Chạm để bắt đầu quét</button>
-    <p>Chỉ cần chạm 1 lần duy nhất để mở camera và bật âm thanh — sau đó quét mã liên tục không cần chạm gì thêm.</p>
+    <div class="role-title">Bạn là</div>
+    <div class="role-options">
+      <button id="roleDiBtn" class="role-btn role-di">
+        <span class="role-icon">🚚</span>
+        <span class="role-label">Đơn đi</span>
+      </button>
+      <button id="roleHoanBtn" class="role-btn role-hoan">
+        <span class="role-icon">↩️</span>
+        <span class="role-label">Đơn hoàn</span>
+      </button>
+    </div>
+    <p>Chỉ cần chạm 1 lần để mở camera và bật âm thanh — sau đó quét mã liên tục không cần chạm gì thêm.</p>
   </div>
 
   <div class="tabs">
@@ -322,11 +339,14 @@
     el('switchCamBtn').onclick = switchCamera;
 
     // Chạm 1 lần duy nhất để mở khoá âm thanh + bắt đầu camera (yêu cầu bảo mật của Safari)
-    el('startBtn').onclick = function(){
-      unlockAudio();
-      el('startOverlay').style.display = 'none';
-      startScanner();
-    };
+        function beginScan(type){
+                setTab(type);
+                unlockAudio();
+                el('startOverlay').style.display = 'none';
+                startScanner();
+        }
+        el('roleDiBtn').onclick = function(){ beginScan('di'); };
+        el('roleHoanBtn').onclick = function(){ beginScan('hoan'); };
   </script>
 </body>
 </html>
