@@ -28,14 +28,8 @@
       width:100%; padding:10px; font-size:16px; border-radius:8px; border:1px solid #ddd; background:#fff;
     }
 
-    #reader{
-      width:100%; max-width:520px; aspect-ratio:1 / 1;
-      margin:0 auto; background:#000; overflow:hidden;
-    }
-    #reader video{
-      width:100% !important; height:100% !important;
-      object-fit:cover; object-position:center;
-    }
+    #reader{ width:100%; aspect-ratio: 1 / 1; overflow:hidden; background:#000; position:relative; }
+    #reader video{ width:100% !important; height:100% !important; object-fit:cover !important; }
 
     .banner{
       margin:14px; padding:16px; border-radius:12px; background:var(--card);
@@ -86,20 +80,20 @@
     .role-di{ background:linear-gradient(135deg,#34a853,#1e8e3e); }
     .role-hoan{ background:linear-gradient(135deg,#f2994a,#e8710a); }
     .start-overlay p{ color:#c9ccd6; font-size:13px; max-width:280px; margin:4px 0 0; }
-    .scan-flash{
-      position:fixed; inset:0; z-index:100; pointer-events:none; opacity:0;
-      background:rgba(255,255,255,.72);
+
+    .flash-overlay{
+      position:fixed; inset:0; background:#fff; z-index:40; pointer-events:none; opacity:0;
     }
-    .scan-flash.active{ animation:scanFlash .18s ease-out; }
-    @keyframes scanFlash{
-      0%{ opacity:1; }
+    .flash-overlay.active{ animation: flashPulse .25s ease-out; }
+    @keyframes flashPulse{
+      0%{ opacity:.9; }
       100%{ opacity:0; }
     }
   </style>
 </head>
 <body>
 
-  <div class="scan-flash" id="scanFlash" aria-hidden="true"></div>
+  <div class="flash-overlay" id="flashOverlay"></div>
 
   <div class="start-overlay" id="startOverlay">
     <div class="role-title">Bạn muốn quét..</div>
@@ -161,40 +155,8 @@
       }catch(e){}
     }
 
-    // status === 'Mới'  -> tiếng "ting" cao, gọn, dễ chịu
-    // status === 'Trùng' -> tiếng "tẹt" trầm, rè, đi xuống (giống báo lỗi)
-    function playResultSound(status){
-      try{
-        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        var now = audioCtx.currentTime;
-        var osc = audioCtx.createOscillator();
-        var gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        if (status === 'Mới'){
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(1600, now);
-          osc.frequency.exponentialRampToValueAtTime(2000, now + 0.08);
-          gain.gain.setValueAtTime(0.22, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-          osc.start(now);
-          osc.stop(now + 0.3);
-        } else {
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(300, now);
-          osc.frequency.exponentialRampToValueAtTime(130, now + 0.28);
-          gain.gain.setValueAtTime(0.2, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
-          osc.start(now);
-          osc.stop(now + 0.32);
-        }
-      }catch(e){ /* thiết bị không hỗ trợ, bỏ qua */ }
-    }
-
-    // Phản hồi cục bộ ngay khi thư viện nhận diện được mã, không chờ Apps Script.
-    function playInstantScanFeedback(){
+    // Tiếng "ting" — phát NGAY khi nhận diện được mã (chưa cần biết Mới/Trùng)
+    function playDetectedSound(){
       try{
         audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -204,17 +166,44 @@
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(1450, now);
+        osc.frequency.setValueAtTime(1600, now);
+        osc.frequency.exponentialRampToValueAtTime(2000, now + 0.08);
         gain.gain.setValueAtTime(0.22, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
         osc.start(now);
-        osc.stop(now + 0.12);
-      }catch(e){}
+        osc.stop(now + 0.3);
+      }catch(e){ /* thiết bị không hỗ trợ, bỏ qua */ }
+    }
 
-      var flash = el('scanFlash');
-      flash.classList.remove('active');
-      void flash.offsetWidth;
-      flash.classList.add('active');
+    // Tiếng "tẹt" — phát THÊM (sau tiếng ting) khi server xác nhận là mã Trùng
+    function playDuplicateWarning(){
+      try{
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        var now = audioCtx.currentTime;
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(130, now + 0.28);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+        osc.start(now);
+        osc.stop(now + 0.32);
+      }catch(e){ /* thiết bị không hỗ trợ, bỏ qua */ }
+    }
+
+    // Chớp trắng toàn màn hình — phản hồi thị giác tức thời lúc nhận diện được mã
+    function flashScreen(){
+      try{
+        var f = el('flashOverlay');
+        if (!f) return;
+        f.classList.remove('active');
+        void f.offsetWidth; // ép reflow để animation chạy lại từ đầu mỗi lần gọi
+        f.classList.add('active');
+      }catch(e){ /* không chớp được thì bỏ qua, không được để vỡ luồng quét */ }
     }
 
     function setTab(type){
@@ -288,7 +277,9 @@
       }
       scanning.locked = true;
 
-      playInstantScanFeedback();
+      // Phản hồi tức thời ngay khi nhận diện được mã — không chờ server
+      playDetectedSound();
+      flashScreen();
       if (navigator.vibrate) navigator.vibrate(80);
 
       // Gửi dạng text/plain để tránh CORS preflight (Apps Script không xử lý được preflight)
@@ -300,7 +291,7 @@
         .then(function(r){ return r.json(); })
         .then(function(res){
           if (res.error) { renderBannerError('Lỗi: ' + res.error); return; }
-          if (res.status === 'Trùng') playResultSound(res.status);
+          if (res.status === 'Trùng') playDuplicateWarning();
           renderBanner(res.status, res.code);
           lastResults.unshift(res);
           renderHistory();
@@ -345,15 +336,14 @@
       qr.start(
         { facingMode: currentFacingMode },
         {
-                    fps: 15,
-                    aspectRatio: 14 / 9,
-                    qrbox: { width: 280, height: 180 },
-                    disableFlip: false,
-                    videoConstraints: {
-                                  facingMode: currentFacingMode,
-                                  width: { ideal: 1920 },
-                                  height: { ideal: 1080 }
-                    }
+          fps: 15,
+          qrbox: { width: 250, height: 250 },
+          disableFlip: false,
+          videoConstraints: {
+            facingMode: currentFacingMode,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
         },
         onScanSuccess,
         function(){ /* lỗi từng frame, bỏ qua */ }
@@ -382,14 +372,14 @@
     el('switchCamBtn').onclick = switchCamera;
 
     // Chạm 1 lần duy nhất để mở khoá âm thanh + bắt đầu camera (yêu cầu bảo mật của Safari)
-        function beginScan(type){
-                setTab(type);
-                unlockAudio();
-                el('startOverlay').style.display = 'none';
-                startScanner();
-        }
-        el('roleDiBtn').onclick = function(){ beginScan('di'); };
-        el('roleHoanBtn').onclick = function(){ beginScan('hoan'); };
+    function beginScan(type){
+      setTab(type);
+      unlockAudio();
+      el('startOverlay').style.display = 'none';
+      startScanner();
+    }
+    el('roleDiBtn').onclick = function(){ beginScan('di'); };
+    el('roleHoanBtn').onclick = function(){ beginScan('hoan'); };
   </script>
 </body>
 </html>
