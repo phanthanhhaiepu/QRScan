@@ -28,8 +28,14 @@
       width:100%; padding:10px; font-size:16px; border-radius:8px; border:1px solid #ddd; background:#fff;
     }
 
-    #reader{ width:100%; background:#000; }
-    #reader video{ width:100% !important; }
+    #reader{
+      width:100%; max-width:520px; aspect-ratio:1 / 1;
+      margin:0 auto; background:#000; overflow:hidden;
+    }
+    #reader video{
+      width:100% !important; height:100% !important;
+      object-fit:cover; object-position:center;
+    }
 
     .banner{
       margin:14px; padding:16px; border-radius:12px; background:var(--card);
@@ -294,6 +300,7 @@
         .then(function(r){ return r.json(); })
         .then(function(res){
           if (res.error) { renderBannerError('Lỗi: ' + res.error); return; }
+          if (res.status === 'Trùng') playResultSound(res.status);
           renderBanner(res.status, res.code);
           lastResults.unshift(res);
           renderHistory();
@@ -339,6 +346,7 @@
         { facingMode: currentFacingMode },
         {
                     fps: 15,
+                    aspectRatio: 14 / 9,
                     qrbox: { width: 280, height: 180 },
                     disableFlip: false,
                     videoConstraints: {
