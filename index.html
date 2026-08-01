@@ -284,17 +284,16 @@
         verbose: false
       });
       qr.start(
+        { facingMode: currentFacingMode },
         {
-          facingMode: currentFacingMode,
-          // Xin độ phân giải cao hơn để bắt được mã nhỏ / xa camera tốt hơn
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        },
-        {
-          fps: 15,
-          // Khung chữ nhật rộng hơn cho phù hợp với mã vạch 1D (dài ngang) thay vì chỉ vuông cho QR
-          qrbox: { width: 280, height: 180 },
-          disableFlip: false
+                    fps: 15,
+                    qrbox: { width: 280, height: 180 },
+                    disableFlip: false,
+                    videoConstraints: {
+                                  facingMode: currentFacingMode,
+                                  width: { ideal: 1920 },
+                                  height: { ideal: 1080 }
+                    }
         },
         onScanSuccess,
         function(){ /* lỗi từng frame, bỏ qua */ }
