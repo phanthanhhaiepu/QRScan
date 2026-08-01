@@ -80,9 +80,20 @@
     .role-di{ background:linear-gradient(135deg,#34a853,#1e8e3e); }
     .role-hoan{ background:linear-gradient(135deg,#f2994a,#e8710a); }
     .start-overlay p{ color:#c9ccd6; font-size:13px; max-width:280px; margin:4px 0 0; }
+    .scan-flash{
+      position:fixed; inset:0; z-index:100; pointer-events:none; opacity:0;
+      background:rgba(255,255,255,.72);
+    }
+    .scan-flash.active{ animation:scanFlash .18s ease-out; }
+    @keyframes scanFlash{
+      0%{ opacity:1; }
+      100%{ opacity:0; }
+    }
   </style>
 </head>
 <body>
+
+  <div class="scan-flash" id="scanFlash" aria-hidden="true"></div>
 
   <div class="start-overlay" id="startOverlay">
     <div class="role-title">Bạn muốn quét..</div>
@@ -176,6 +187,30 @@
       }catch(e){ /* thiết bị không hỗ trợ, bỏ qua */ }
     }
 
+    // Phản hồi cục bộ ngay khi thư viện nhận diện được mã, không chờ Apps Script.
+    function playInstantScanFeedback(){
+      try{
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        var now = audioCtx.currentTime;
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1450, now);
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      }catch(e){}
+
+      var flash = el('scanFlash');
+      flash.classList.remove('active');
+      void flash.offsetWidth;
+      flash.classList.add('active');
+    }
+
     function setTab(type){
       currentType = type;
       el('tabDi').className = 'tab di' + (type === 'di' ? ' active' : '');
@@ -247,6 +282,7 @@
       }
       scanning.locked = true;
 
+      playInstantScanFeedback();
       if (navigator.vibrate) navigator.vibrate(80);
 
       // Gửi dạng text/plain để tránh CORS preflight (Apps Script không xử lý được preflight)
@@ -258,7 +294,6 @@
         .then(function(r){ return r.json(); })
         .then(function(res){
           if (res.error) { renderBannerError('Lỗi: ' + res.error); return; }
-          playResultSound(res.status);
           renderBanner(res.status, res.code);
           lastResults.unshift(res);
           renderHistory();
